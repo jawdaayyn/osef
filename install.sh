@@ -1,187 +1,332 @@
+jawdan
+kcjawdan
+Invisible
+
+jawdan — Aujourd’hui à 02:47
+si tu veux demain je passe a la bibliotheque apres mon taff on finit ça comme ça c'est fini
+Nassima — Aujourd’hui à 02:47
+vasy toi aussi repose toi, tkt je vais resté enccore 30 min, et je dors
+Nassima — Aujourd’hui à 02:48
+oui oui moi c parfait
+jawdan — Aujourd’hui à 02:49
+ouais tkt c ce que je vais faire mdrrr le taff ça ma tue la
+jawdan — Aujourd’hui à 02:49
+tu vas à laquelle d’habitude
+Nassima — Aujourd’hui à 02:51
+bpi chatelet, mais si tu veux une autre tu me dis
+prcq on peut pas trop parlé labas en vrai
+jawdan — Aujourd’hui à 02:54
+ahhh je sais pas comme tu veux
+jawdan — Aujourd’hui à 02:54
+moi je sais juste que celle de biblotheque françois mitterand tu peux réserver une salle en vrai
+Nassima — Aujourd’hui à 02:55
+tu fini à quel heure toi demain?
+jawdan — Aujourd’hui à 02:55
+après jsp si c blindé quoi
+je finis à 18h et toi??
+Nassima — Aujourd’hui à 02:56
+moi je bosse pas demain, j'ai posé aujourd'hui et demain (les  5 jours de révisions par an qu'on a j'ai pris 2 jrs j'ai laissé 3 pour l'autre semestre  ), j'étais un peu malade le début de la semaine donc je prefere me reposé un peu deja avnt la semaine pro
+mais au final a cause de ce projet il m'as plus fatiguée lol
+François mitterrand ferme à 20h c'est tot non ? vu que tu fini à 18h
+bpi jusqu'a 22h
+jawdan — Aujourd’hui à 02:59
+ptnnnnn j’avoue c pas bête ça les 5 jours faut jles dépense à un moment
+nn mais ta raison repose toi semaine pro ça va être hardcore
+faut être prêt
+moi j’ai posé 3 semaines en mai mdr jveux me reposer en mai c tout
+vas-y go BPI alors ouais j’avoue jsavais aps ça ferme à 20h
+Nassima — Aujourd’hui à 03:00
+oui je vais etre a la bpi vers 15h -16h je vais essayer d'avancé , tu me rejoins apres
+on analysant mon fichier de log je vois que le partitionnement et le montage fonctionnent parfaitement , et c'est le grep qui est mal installé je vais l'installé manuellement pour etre sur que c'est ça, on le corrige ca devrait aller
+Image
+Image
+vasy bonne nuit à demain, je fini juste le test je dors
+jawdan — Aujourd’hui à 03:03
+vasyyy on fait comme ça jsuis là à 18h30 normalement
+Nassima — Aujourd’hui à 03:03
+oki parfait
+a demain
+jawdan — Aujourd’hui à 03:04
+ahhhh ptnnn y’a grave moyen c’est ça okok
+vas-y bonne nuit à demain
+reste pas trop tard dessus
+Nassima — Aujourd’hui à 03:05
+tkt tkt , vasy bonne nuit, c'est le last test
+jawdan — Aujourd’hui à 17:02
+salut nassima ça va ? du coup c’est toujours bon si j’viens a la bibliothèque à 18h30?? 
+Nassima — Aujourd’hui à 17:03
+Salut Jawdan, ca av et toi ? oui oui je suis à la bibliotheque
+Image
+Je suis en train de tester ça
+Nassima — Aujourd’hui à 17:54
+omg, l'Install est fini, je redémarre j'ai peur lol
+jawdan — Aujourd’hui à 18:15
+vas-y c’est bon j’arrive là
+jawdan — Aujourd’hui à 18:15
+ça va ça va, att il est trop sympa wsh il t’a tout donné
+jawdan — Aujourd’hui à 18:16
+vas-y j’espère ça passe mdrrrr
+jawdan — Aujourd’hui à 18:40
+je suis rentré faut aller ou mdrrr
+Nassima — Aujourd’hui à 18:41
+attends j'arrive
+T ou je suis à l’entrée
+jawdan — Aujourd’hui à 18:42
+moi aussi
+Nassima — Aujourd’hui à 18:42
+Image
+jawdan — Aujourd’hui à 18:42
+faut monter en haut ??
+Nassima — Aujourd’hui à 18:43
+Oui  ’étage Bpi
+jawdan — Aujourd’hui à 18:43
+okok j’arrive
+Nassima — Aujourd’hui à 18:43
+Vas-y
+Tu as manqué un appel de Nassima qui a duré quelques secondes. — Aujourd’hui à 18:48
+Nassima — Aujourd’hui à 18:57
 #!/bin/bash
 
-# S'assurer que le script est exécuté en tant que root
+# ✅ Vérification si le script est exécuté en root
 if [ "$EUID" -ne 0 ]; then
-    echo "Script must be executed as root"
+    echo "Ce script doit être exécuté en tant que root."
     exit 1
 fi
 
-# VARIABLES DE PARTITIONNEMENT
+# 🔹 Définition des variables
 DISK="/dev/sda"
+PASSWORD="azerty123"
 HOSTNAME="arch-vm"
 
-# PROGRAMME D'INSTALLATION
-setup_partitions() {
-    # NETTOYAGE DES MONTAGES EXISTANTS ET LVM
-    # Démonter tout d'abord
-    for mount in /mnt/share /mnt/vbox /mnt/boot /mnt; do
-        umount -f $mount 2>/dev/null || true
-    done
+# ✅ Partitionnement du disque
+parted --script $DISK mklabel gpt
+parted --script $DISK mkpart primary fat32 1MiB 513MiB
+parted --script $DISK set 1 esp on
+parted --script $DISK mkpart primary ext4 513MiB 1GiB
+parted --script $DISK mkpart primary 1GiB 100%
 
-    # Désactiver et supprimer LVM
-    lvchange -an /dev/vg0/* 2>/dev/null || true
-    vgchange -an 2>/dev/null || true
-    vgremove -f vg0 2>/dev/null || true
-    pvremove -f /dev/mapper/cryptlvm 2>/dev/null || true
+# ✅ Chiffrement de la partition principale
+echo -n "$PASSWORD" | cryptsetup luksFormat --type luks2 ${DISK}3 -
+echo -n "$PASSWORD" | cryptsetup open ${DISK}3 cryptlvm
 
-    # Fermer LUKS
-    cryptsetup close cryptlvm 2>/dev/null || true
+# 📌 Vérification : Est-ce que cryptlvm est bien ouvert ?
+ls /dev/mapper/
+if [ ! -e "/dev/mapper/cryptlvm" ]; then
+    echo "Erreur : Le chiffrement LUKS a échoué."
+    exit 1
+fi
 
-    # Forcer le noyau à relire la table de partitions
-    partprobe $DISK
-    sleep 2
+# ✅ Création du volume LVM
+pvcreate /dev/mapper/cryptlvm
+vgcreate vg0 /dev/mapper/cryptlvm
+lvcreate -L 30G -n root vg0
+lvcreate -L 8G -n swap vg0
+lvcreate -L 10G -n encrypted vg0
+lvcreate -L 5G -n shared vg0
+lvcreate -L 10G -n vbox vg0
+lvcreate -l 100%FREE -n home vg0
 
-    # EFFACER LES PARTITIONS EXISTANTES
-    dd if=/dev/zero of=$DISK bs=512 count=2048
-    wipefs -af $DISK
-    sgdisk -Z $DISK
-    partprobe $DISK
-    sleep 2
+# ✅ Formatage des partitions
+mkfs.fat -F32 ${DISK}1
+mkfs.ext4 ${DISK}2
+mkfs.ext4 /dev/vg0/root
+mkfs.ext4 /dev/vg0/home
+mkfs.ext4 /dev/vg0/shared
+mkfs.ext4 /dev/vg0/vbox
+mkswap /dev/vg0/swap
+swapon /dev/vg0/swap
 
-    # CRÉER LA TABLE DE PARTITIONS
-    parted -s $DISK mklabel gpt
+# ✅ Montage des partitions
+mount /dev/vg0/root /mnt
+mkdir -p /mnt/boot
+mount ${DISK}2 /mnt/boot
+mkdir -p /mnt/boot/efi
+mount ${DISK}1 /mnt/boot/efi
+mkdir -p /mnt/home
+mount /dev/vg0/home /mnt/home
+mkdir -p /mnt/shared
+mount /dev/vg0/shared /mnt/shared
+mkdir -p /mnt/vbox
+mount /dev/vg0/vbox /mnt/vbox
 
-    # CRÉER LA PARTITION EFI (512MB)
-    sgdisk -n 1:0:+512M -t 1:ef00 $DISK
+# 📌 Vérification : Tout est bien monté ?
+lsblk -f
 
-    # CRÉER LA DEUXIÈME PARTITION POUR LUKS/LVM
-    sgdisk -n 2:0:0 -t 2:8e00 $DISK
-    partprobe $DISK
-    sleep 2
+# ✅ Installation du système de base
+pacstrap /mnt base linux linux-firmware lvm2 vim networkmanager
 
-    # FORMATER LA PARTITION EFI
-    mkfs.fat -F32 "${DISK}1"
+# ✅ Génération du fichier fstab
+genfstab -U /mnt >> /mnt/etc/fstab
 
-    # CONFIGURER LUKS SUR LA DEUXIÈME PARTITION
-    echo -n "azerty123" | cryptsetup luksFormat "${DISK}2" -
-    echo -n "azerty123" | cryptsetup open "${DISK}2" cryptlvm -
+# ✅ Configuration du système
+arch-chroot /mnt /bin/bash <<EOF
 
-    # CONFIGURER LVM
-    pvcreate -ff /dev/mapper/cryptlvm
-    vgcreate vg0 /dev/mapper/cryptlvm
-
-    # CRÉER LES VOLUMES LOGIQUES AVEC TAILLES SPÉCIFIÉES
-    lvcreate -y -L 10G vg0 -n lvroot
-    lvcreate -y -L 10G vg0 -n lvvbox
-    lvcreate -y -L 5G vg0 -n lvshare
-
-    # FORMATER LES VOLUMES LOGIQUES
-    mkfs.ext4 -F /dev/vg0/lvroot
-    mkfs.ext4 -F /dev/vg0/lvvbox
-    mkfs.ext4 -F /dev/vg0/lvshare
-
-    # CRÉER LES POINTS DE MONTAGE
-    mkdir -p /mnt /mnt/boot /mnt/vbox /mnt/share
-
-    # MONTER LES SYSTÈMES DE FICHIERS
-    mount /dev/vg0/lvroot /mnt || true
-    mount "${DISK}1" /mnt/boot || true
-    mount /dev/vg0/lvvbox /mnt/vbox || true
-    mount /dev/vg0/lvshare /mnt/share || true
-}
-
-
-setup_base_system() {
-    # CONFIGURATION DU SYSTÈME DE BASE
-	echo "===  Installation du système de base ==="
-
-    # 1) Installer Arch Linux de base dans /mnt
-    pacstrap /mnt base linux linux-firmware base-devel
-
-    # 2) Générer fstab
-    genfstab -U /mnt >> /mnt/etc/fstab
-
-    echo "Base system installed, fstab generated."
-	
-}
-
-setup_config() {
-echo "===  Configuration du système (chroot) ==="
-cat <<EOF | arch-chroot /mnt /bin/bash
-# 1) Timezone, horloge
+# ✅ Configuration du fuseau horaire et horloge
 ln -sf /usr/share/zoneinfo/Europe/Paris /etc/localtime
 hwclock --systohc
 
-# 2) Locale (fr_FR, si besoin)
-sed -i 's/^#fr_FR.UTF-8 UTF-8/fr_FR.UTF-8 UTF-8/' /etc/locale.gen
+# ✅ Configuration de la langue et de la console
+echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
 locale-gen
-echo "LANG=fr_FR.UTF-8" > /etc/locale.conf
-echo "KEYMAP=fr" > /etc/vconsole.conf
-
-# 3) Hostname et /etc/hosts
+echo "LANG=en_US.UTF-8" > /etc/locale.conf
 echo "$HOSTNAME" > /etc/hostname
-echo "127.0.0.1   localhost" >> /etc/hosts
-echo "::1         localhost" >> /etc/hosts
-echo "127.0.1.1   $HOSTNAME" >> /etc/hosts
+echo "127.0.0.1 localhost" >> /etc/hosts
+echo "::1       localhost" >> /etc/hosts
+echo "127.0.1.1 $HOSTNAME.localdomain $HOSTNAME" >> /etc/hosts
 
-# 4) Mot de passe root
-echo "root:azerty123" | chpasswd
+# ✅ Activation du réseau
+systemctl enable NetworkManager
+systemctl start NetworkManager
 
-# 5) mkinitcpio (chiffrement + LVM)
-sed -i 's/^HOOKS=(base udev autodetect modconf block filesystems keyboard fsck)/HOOKS=(base udev autodetect modconf block encrypt lvm2 filesystems keyboard fsck)/' /etc/mkinitcpio.conf
-mkinitcpio -P
-
-# 6) Installer GRUB (UEFI)
-pacman -S --noconfirm grub efibootmgr
-
-# Installer GRUB sur la partition EFI
-grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --removable
-
-# On ajoute l'option cryptdevice (pour déchiffrer /dev/sda2)
-UUID_LUKS=$(blkid -s UUID -o value ${DISK}2)
-sed -i "s|^GRUB_CMDLINE_LINUX=\"\"|GRUB_CMDLINE_LINUX=\"cryptdevice=UUID=$UUID_LUKS:cryptlvm root=/dev/vg0/lvroot\"|" /etc/default/grub
-
-# Ajouter ces lignes pour s'assurer que les modules nécessaires sont chargés
-echo "GRUB_PRELOAD_MODULES=\"part_gpt part_msdos lvm\"" >> /etc/default/grub
-echo "GRUB_ENABLE_CRYPTODISK=y" >> /etc/default/grub
-
-grub-mkconfig -o /boot/grub/grub.cfg
-
-# 7) Utilisateurs: papa, fils
-pacman -S --noconfirm sudo
+# ✅ Création des utilisateurs
+echo "root:$PASSWORD" | chpasswd
 useradd -m -G wheel -s /bin/bash papa
-echo "papa:azerty123" | chpasswd
+echo "papa:$PASSWORD" | chpasswd
 useradd -m -s /bin/bash fils
-echo "fils:azerty123" | chpasswd
+echo "fils:$PASSWORD" | chpasswd
+sed -i 's/^# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
+... (39lignes restantes)
+Réduire
+message.txt
+5 Ko
+﻿
+#!/bin/bash
 
-# Droits sudo au groupe wheel
-sed -i 's/^# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' /etc/sudoers
+# ✅ Vérification si le script est exécuté en root
+if [ "$EUID" -ne 0 ]; then
+    echo "Ce script doit être exécuté en tant que root."
+    exit 1
+fi
 
-# 8) Paquets supplémentaires
-pacman -S --noconfirm nano git htop firefox virtualbox i3 dmenu xorg xorg-xinit \
-    xterm alacritty feh nitrogen picom
+# 🔹 Définition des variables
+DISK="/dev/sda"
+PASSWORD="azerty123"
+HOSTNAME="arch-vm"
 
+# ✅ Partitionnement du disque
+parted --script $DISK mklabel gpt
+parted --script $DISK mkpart primary fat32 1MiB 513MiB
+parted --script $DISK set 1 esp on
+parted --script $DISK mkpart primary ext4 513MiB 1GiB
+parted --script $DISK mkpart primary 1GiB 100%
 
-# 9) Config de Hyprland (pour papa)
+# ✅ Chiffrement de la partition principale
+echo -n "$PASSWORD" | cryptsetup luksFormat --type luks2 ${DISK}3 -
+echo -n "$PASSWORD" | cryptsetup open ${DISK}3 cryptlvm
+
+# 📌 Vérification : Est-ce que cryptlvm est bien ouvert ?
+ls /dev/mapper/
+if [ ! -e "/dev/mapper/cryptlvm" ]; then
+    echo "Erreur : Le chiffrement LUKS a échoué."
+    exit 1
+fi
+
+# ✅ Création du volume LVM
+pvcreate /dev/mapper/cryptlvm
+vgcreate vg0 /dev/mapper/cryptlvm
+lvcreate -L 30G -n root vg0
+lvcreate -L 8G -n swap vg0
+lvcreate -L 10G -n encrypted vg0
+lvcreate -L 5G -n shared vg0
+lvcreate -L 10G -n vbox vg0
+lvcreate -l 100%FREE -n home vg0
+
+# ✅ Formatage des partitions
+mkfs.fat -F32 ${DISK}1
+mkfs.ext4 ${DISK}2
+mkfs.ext4 /dev/vg0/root
+mkfs.ext4 /dev/vg0/home
+mkfs.ext4 /dev/vg0/shared
+mkfs.ext4 /dev/vg0/vbox
+mkswap /dev/vg0/swap
+swapon /dev/vg0/swap
+
+# ✅ Montage des partitions
+mount /dev/vg0/root /mnt
+mkdir -p /mnt/boot
+mount ${DISK}2 /mnt/boot
+mkdir -p /mnt/boot/efi
+mount ${DISK}1 /mnt/boot/efi
+mkdir -p /mnt/home
+mount /dev/vg0/home /mnt/home
+mkdir -p /mnt/shared
+mount /dev/vg0/shared /mnt/shared
+mkdir -p /mnt/vbox
+mount /dev/vg0/vbox /mnt/vbox
+
+# 📌 Vérification : Tout est bien monté ?
+lsblk -f
+
+# ✅ Installation du système de base
+pacstrap /mnt base linux linux-firmware lvm2 vim networkmanager
+
+# ✅ Génération du fichier fstab
+genfstab -U /mnt >> /mnt/etc/fstab
+
+# ✅ Configuration du système
+arch-chroot /mnt /bin/bash <<EOF
+
+# ✅ Configuration du fuseau horaire et horloge
+ln -sf /usr/share/zoneinfo/Europe/Paris /etc/localtime
+hwclock --systohc
+
+# ✅ Configuration de la langue et de la console
+echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
+locale-gen
+echo "LANG=en_US.UTF-8" > /etc/locale.conf
+echo "$HOSTNAME" > /etc/hostname
+echo "127.0.0.1 localhost" >> /etc/hosts
+echo "::1       localhost" >> /etc/hosts
+echo "127.0.1.1 $HOSTNAME.localdomain $HOSTNAME" >> /etc/hosts
+
+# ✅ Activation du réseau
+systemctl enable NetworkManager
+systemctl start NetworkManager
+
+# ✅ Création des utilisateurs
+echo "root:$PASSWORD" | chpasswd
+useradd -m -G wheel -s /bin/bash papa
+echo "papa:$PASSWORD" | chpasswd
+useradd -m -s /bin/bash fils
+echo "fils:$PASSWORD" | chpasswd
+sed -i 's/^# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
+
+# ✅ Installation des paquets essentiels
+pacman -Syu --noconfirm
+pacman -S sudo virtualbox virtualbox-host-dkms linux-headers firefox gcc make htop neofetch git base-devel xorg-server xorg-xinit i3 dmenu alacritty --noconfirm
+
+# ✅ Configuration de i3 pour l’utilisateur papa
 mkdir -p /home/papa/.config/i3
 cat <<EOCFG > /home/papa/.config/i3/config
-set $mod Mod4  # Super key
-bindsym $mod+Return exec alacritty  # Ouvrir un terminal
-bindsym $mod+d exec dmenu_run  # Lancer le menu
-bindsym $mod+q kill  # Fermer une fenêtre
-bindsym $mod+f fullscreen toggle  # Plein écran
-exec --no-startup-id feh --bg-scale /usr/share/backgrounds/archlinux.png  # Fond d'écran
-exec --no-startup-id picom  # Activer les effets graphiques
+# i3 minimal config
+exec --no-startup-id nm-applet
+exec --no-startup-id feh --bg-scale /usr/share/backgrounds/archlinux.png
+bindsym \$mod+Enter exec alacritty
+bindsym \$mod+d exec dmenu_run
 EOCFG
 chown -R papa:papa /home/papa/.config
 
-# 10) Dossier partagé
-groupadd sharedusers
-usermod -aG sharedusers papa
-usermod -aG sharedusers fils
-chown root:sharedusers /share
-chmod 770 /share
+# ✅ Installation de GRUB et génération du fichier de configuration
+pacman -S grub efibootmgr --noconfirm
+echo "GRUB_CMDLINE_LINUX=\"cryptdevice=${DISK}3:cryptlvm root=/dev/mapper/vg0-root\"" >> /etc/default/grub
+grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
+grub-mkconfig -o /boot/grub/grub.cfg
+
+# ✅ Correction de initramfs
+sed -i 's/^HOOKS=(.*/HOOKS=(base udev autodetect modconf block encrypt lvm2 filesystems keyboard fsck)/' /etc/mkinitcpio.conf
+mkinitcpio -P
 
 EOF
 
-    echo "=== Fin du chroot. Démontage et fermeture LUKS ==="
-    umount -R /mnt
-    cryptsetup close cryptlvm
+# ✅ Vérifications finales avant redémarrage
+lsblk -f > /mnt/install_check.txt
+cat /mnt/etc/fstab >> /mnt/install_check.txt
 
-    echo "Installation terminée ! Vous pouvez redémarrer la VM."
-}
+# ✅ Nettoyage et démontage
+umount -R /mnt
+swapoff -a
+cryptsetup close cryptlvm
 
-# APPEL DES FONCTIONS
-setup_partitions
-setup_base_system
-setup_config
+echo "Installation terminée ! Vérifie le fichier /mnt/install_check.txt avant de redémarrer."
+message.txt
+5 Ko
