@@ -103,7 +103,7 @@ sed -i 's/^# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/' /etc/sudoers
 pacman -Syu --noconfirm
 pacman -S sudo virtualbox virtualbox-host-dkms linux-headers firefox gcc make htop neofetch git base-devel xorg-server xorg-xinit i3 dmenu alacritty --noconfirm
 
-# ✅ Configuration de i3 pour l’utilisateur papa
+# ✅ Configuration de i3 pour l'utilisateur papa
 mkdir -p /home/papa/.config/i3
 cat <<EOCFG > /home/papa/.config/i3/config
 # i3 minimal config
@@ -114,10 +114,19 @@ bindsym \$mod+d exec dmenu_run
 EOCFG
 chown -R papa:papa /home/papa/.config
 
-# ✅ Installation de GRUB et génération du fichier de configuration
+# ✅ Installation de GRUB et configuration pour le chiffrement
 pacman -S grub efibootmgr --noconfirm
-echo "GRUB_CMDLINE_LINUX=\"cryptdevice=${DISK}3:cryptlvm root=/dev/mapper/vg0-root\"" >> /etc/default/grub
-grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
+
+# Enable cryptodisk in GRUB
+sed -i 's/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/' /etc/default/grub
+
+# Add kernel parameters for encryption
+echo "GRUB_CMDLINE_LINUX=\"cryptdevice=UUID=$(blkid -s UUID -o value ${DISK}3):cryptlvm root=/dev/mapper/vg0-root\"" >> /etc/default/grub
+
+# Install GRUB with all modules
+grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB --modules="part_gpt part_msdos crypto luks2 lvm"
+
+# Generate GRUB config
 grub-mkconfig -o /boot/grub/grub.cfg
 
 # ✅ Correction de initramfs
