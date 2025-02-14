@@ -21,6 +21,8 @@ parted --script $DISK mkpart primary 1GiB 100%
 # ✅ Chiffrement de la partition principale
 echo -n "$PASSWORD" | cryptsetup luksFormat --type luks2 ${DISK}3 -
 echo -n "$PASSWORD" | cryptsetup open ${DISK}3 cryptlvm
+vgchange -ay vg0
+
 
 # 📌 Vérification : Est-ce que cryptlvm est bien ouvert ?
 ls /dev/mapper/
@@ -40,13 +42,13 @@ lvcreate -L 10G -n vbox vg0
 lvcreate -l 100%FREE -n home vg0
 
 # ✅ Formatage des partitions
+mkswap /dev/vg0/swap
 mkfs.fat -F32 ${DISK}1
 mkfs.ext4 ${DISK}2
 mkfs.ext4 /dev/vg0/root
 mkfs.ext4 /dev/vg0/home
 mkfs.ext4 /dev/vg0/shared
 mkfs.ext4 /dev/vg0/vbox
-mkswap /dev/vg0/swap
 swapon /dev/vg0/swap
 
 # ✅ Montage des partitions
@@ -136,12 +138,7 @@ mkinitcpio -P
 EOF
 
 # ✅ Vérifications finales avant redémarrage
-lsblk -f > /mnt/install_check.txt
-cat /mnt/etc/fstab >> /mnt/install_check.txt
+lsblk -f > /home/logs/install_check.txt
+cat /mnt/etc/fstab >> /home/logs/install_check.txt
 
-# ✅ Nettoyage et démontage
-umount -R /mnt
-swapoff -a
-cryptsetup close cryptlvm
-
-echo "Installation terminée ! Vérifie le fichier /mnt/install_check.txt avant de redémarrer."
+echo "Installation terminée ! Vérifie le fichier /home/logs/install_check.txt avant de redémarrer."
