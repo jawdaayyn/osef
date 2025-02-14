@@ -125,11 +125,15 @@ mkinitcpio -P
 pacman -S --noconfirm grub efibootmgr
 
 # Installer GRUB sur la partition EFI
-grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --removable
 
 # On ajoute l'option cryptdevice (pour déchiffrer /dev/sda2)
-UUID_LUKS=\$(blkid -s UUID -o value ${DISK}2)
-sed -i "s|^GRUB_CMDLINE_LINUX=\"\"|GRUB_CMDLINE_LINUX=\"cryptdevice=UUID=\$UUID_LUKS:cryptlvm root=/dev/vg0/lvroot\"|" /etc/default/grub
+UUID_LUKS=$(blkid -s UUID -o value ${DISK}2)
+sed -i "s|^GRUB_CMDLINE_LINUX=\"\"|GRUB_CMDLINE_LINUX=\"cryptdevice=UUID=$UUID_LUKS:cryptlvm root=/dev/vg0/lvroot\"|" /etc/default/grub
+
+# Ajouter ces lignes pour s'assurer que les modules nécessaires sont chargés
+echo "GRUB_PRELOAD_MODULES=\"part_gpt part_msdos lvm\"" >> /etc/default/grub
+echo "GRUB_ENABLE_CRYPTODISK=y" >> /etc/default/grub
 
 grub-mkconfig -o /boot/grub/grub.cfg
 
